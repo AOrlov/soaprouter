@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap-deployment-descriptor>
+<entry>
+<namespace-uri>http://types.mcbeath.com/math/service/v1/</namespace-uri>
+<method-name>addition</method-name>
+<database>Math</database>
+<module-location>Math/operations</module-location>
+</entry>
+</soap-deployment-descriptor>

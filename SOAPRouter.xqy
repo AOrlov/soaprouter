@@ -1,22 +1,4 @@
 (:-------------------------------------------------------------
-/*
- * Copyright (c)2004 Mark Logic Corporation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * The use of the Apache License does not indicate that this project is
- * affiliated with the Apache Software Foundation.
- */
 
 Script: SOAP Router
 
@@ -24,15 +6,17 @@ Version: 0.1
 
 Author: Darin McBeath
 
-Date:   August 16, 2004
+Date:   September 22, 2004
 
 This script serves the following role:
 
   1. Accepts requests in SOAP Wrapped Document Literal format.	
   2. Processes the SOAP request to extract the targeted
      operation to invoke (a user defined xquery function).
-  3. Invokes the function (with the extracted parameters).
-  4. Constructs a SOAP Wrapped Document Literal response
+  3. Finds the location of the library module.
+  4. Finds the database to use for execution of the query.
+  5. Invokes the function (with the extracted parameters).
+  6. Constructs a SOAP Wrapped Document Literal response
      containing the results of the function.
 
 Notes:
@@ -41,7 +25,7 @@ Notes:
 * No support for SOAP with Attachments.
 * Requests MUST BE in wrapped document literal format.
   http://www-106.ibm.com/developerworks/webservices/library/ws-whichwsdl
-* This SOAP implementation is not WS-I compliant.
+* This SOAP implementation is not 100% WS-I compliant.
 
 -------------------------------------------------------------:)
 
@@ -150,70 +134,120 @@ define function process-message($msg as xs:string?)
 }
 
 (:-----------------------------------------------------------:)
-(: FUNCTION --> Construct the XQuery                         :)
-(:                                                           :)
-(: The following code is a workaround until library modules  :)
-(: can be stored in the Mark Logic database (version 2.3).   :)
-(: The following logic assumes that the library module will  :)
-(: be stored in a directory relative to the base directory   :)
-(: for the HTTP server.  The actual file name must be named  :)
-(: 'operations'.  The URI for the library module must begin  :)
-(: with 'http://' and end with a '/'.  The example below     :)
-(: should clarify any function.                              :)
-(:                                                           :)
-(: Sample library module URI.                                :)
-(:        http://www.xq.com/a/b/c/                           :)
-(:                                                           :)
-(: Expected directory structure and file (relative to the    :)
-(: HTTP server root.                                         :)
-(:        www.xq.com/a/b/c/operations                        :)
+(: FUNCTION --> Find the Database                            :)
 (:                                                           :)
 (: Input    The operation URI                                :)
 (:          The operation name                               :)
+(:                                                           :)
+(: Output   The database identifier                          :)                                                          
+(:-----------------------------------------------------------:)
+define function find-database($methodUri as xs:string,
+                              $methodName as xs:string)
+
+       as xs:unsignedLong {
+
+  let $db := doc("soap-deployment-descriptor")//entry
+                [namespace-uri = $methodUri]
+                [method-name = $methodName]
+  return
+
+    if (empty($db)) then
+
+      error("007",
+            ("SOAPFault",
+             "SOAPClient",
+             "SOAP-Unknown operation specified"))
+
+    else
+
+      let $dbno := xdmp:database(xs:string($db/database))
+      return
+
+        if (empty($dbno)) then
+
+          error("100",
+                ("SOAPFault",
+                 "SOAPServer",
+                 "SOAP-Unknown database"))
+        else
+
+          $dbno 
+
+}
+
+(:-----------------------------------------------------------:)
+(: FUNCTION --> Find the Library Module                      :)
+(:                                                           :)
+(: Input    The operation URI                                :)
+(:          The operation name                               :)
+(:                                                           :)
+(: Output   The library module location                      :)                                                          
+(:-----------------------------------------------------------:)
+define function find-library-module($methodUri as xs:string,
+                                    $methodName as xs:string)
+
+       as xs:string {
+
+  let $db := doc("soap-deployment-descriptor")//entry
+                [namespace-uri = $methodUri]
+                [method-name = $methodName]
+  return
+    xs:string($db/module-location)
+
+}
+
+(:-----------------------------------------------------------:)
+(: FUNCTION --> Construct the XQuery                         :)
+(:                                                           :)
+(: Input    The operation URI                                :)
+(:          The operation name                               :)
+(:          The library module location                      :)
 (:          The operation parameters                         :)
 (:                                                           :)
 (: Output   The query to evaluate                            :)                                                          
 (:-----------------------------------------------------------:)
 define function construct-query($methodUri as xs:string,
                                 $methodName as xs:string,
+                                $libraryModule as xs:string,
                                 $methodWrapper as element())
        as xs:string {
-            
-  let $unprefixedUri := substring-after($methodUri, "http://")
-  let $adjustedUri   := concat($unprefixedUri, "operations")
-            		      			                    		
-  return concat('import module "',
-                $methodUri, 
-                '" at "', 
-                $adjustedUri, 
-                '" ',
-                'declare namespace route="',
-                $methodUri, 
-                '" ',
-                'route:',
-                $methodName, 
-                "(xs:string('",
-                xdmp:quote($methodWrapper),                       
-                "'))")
+                      		      			                    		
+   concat('import module "',
+          $methodUri, 
+          '" ',
+          ' at "',
+          $libraryModule,
+          '" ',
+          'declare namespace route="',
+          $methodUri, 
+          '" ',
+          'route:',
+          $methodName, 
+          "(xs:string('",
+          xdmp:quote($methodWrapper),                       
+          "'))")
 
 }
+
 
 (:-----------------------------------------------------------:)
 (: FUNCTION --> Evaluate the Query                           :)
 (:                                                           :)  
 (: Input    The query to evaluate                            :)
+(:          The database to use                              :)
 (:                                                           :)  
 (: Output   Results of the query                             :)
 (:-----------------------------------------------------------:)
-define function evaluate-query($query as xs:string)
+define function evaluate-query($query as xs:string,
+                               $db as xs:unsignedLong)
        as item()* {
 
   try {
-
-    xdmp:eval($query)
+    xdmp:log($query),
+    xdmp:eval-in($query, $db)
 
   } catch ($exception) {
-
+    xdmp:log($exception),
     error($exception,
           ("SOAPFault",
            "SOAPServer",
@@ -369,15 +403,21 @@ define function http-fault($error as element())
 
   try {
 
-    (: Get the POST body ... via new function in Mark Logic 2.3 :)
     let $methodWrapper := process-message(xdmp:get-request-body())
 
     let $methodUri := get-namespace-from-QName(node-name($methodWrapper))
     let $methodName := get-local-name-from-QName(node-name($methodWrapper))
 
-    let $query := construct-query($methodUri, $methodName, $methodWrapper)
-   
-    let $result := evaluate-query($query) 
+    let $db := find-database($methodUri, $methodName)
+
+    let $libraryModule := find-library-module($methodUri, $methodName)
+
+    let $query := construct-query($methodUri, 
+                                  $methodName, 
+                                  $libraryModule, 
+                                  $methodWrapper)
+  
+    let $result := evaluate-query($query, $db) 
 
     return
 

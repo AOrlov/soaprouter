@@ -1,0 +1,32 @@
+<?xml version = "1.0" encoding = "UTF-8"?>
+<xsd:schema xmlns:xsd = "http://www.w3.org/2001/XMLSchema"
+            targetNamespace = "http://types.mcbeath.com/math/service/v1/"
+            xmlns = "http://types.mcbeath.com/math/service/v1/"
+            elementFormDefault="qualified"
+			attributeFormDefault="unqualified">
+
+	<!-- The addition operation input payload -->           
+    <xsd:element name="addition">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="operand1" type="operandType" />
+				<xsd:element name="operand2" type="operandType"  />
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+	
+	<!-- The addition operation output payload -->
+	<xsd:element name="additionResponse">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="result" type="operandType"  />
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:simpleType name="operandType">
+			<xsd:restriction base="xsd:integer"/>
+	</xsd:simpleType>
+	      	
+</xsd:schema>
+

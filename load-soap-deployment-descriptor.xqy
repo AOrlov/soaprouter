@@ -1,0 +1,1 @@
+xdmp:load("c:\Program Files\Mark Logic CIS\SOAP\soap-deployment-descriptor.xml", "soap-deployment-descriptor",(),(),0,"","format-xml",()), "loaded"

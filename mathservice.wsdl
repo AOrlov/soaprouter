@@ -1,0 +1,18 @@
+
+<definitions name="MathService"
+	xmlns="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+	targetNamespace="http://wsdls.mcbeath.com/math/service/v1/"
+	xmlns:tns="http://wsdls.mcbeath.com/math/service/v1/"
+	xmlns:bind="http://bindings.mcbeath.com/math/service/v1/" >
+
+	<import namespace="http://bindings.mcbeath.com/math/service/v1/" location="./mathbindings.wsdl"/>
+
+	<service name="MathService">
+		<port name="MathPort" binding="bind:MathServiceSoapBinding">
+			<soap:address location="http://localhost:8020/SoapRouter.xqy"/>
+		</port>
+	</service>
+	
+</definitions>

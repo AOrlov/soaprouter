@@ -1,0 +1,16 @@
+module "http://types.mcbeath.com/math/service/v1/" 
+
+declare namespace math="http://types.mcbeath.com/math/service/v1/" 
+
+default function namespace="http://www.w3.org/2003/05/xpath-functions"
+
+define function math:addition($payload as xs:string) as Element() {
+
+	let $parms := xdmp:unquote($payload)
+	let $parm1 := xs:integer(data($parms/math:operand1))
+	let $parm2 := xs:integer(data($parms/math:operand2))
+
+	return 
+
+		<math:result>{$parm1 + $parm2}</math:result>				
+}

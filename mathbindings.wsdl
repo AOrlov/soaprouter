@@ -1,0 +1,38 @@
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" 
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+	xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+	targetNamespace="http://bindings.mcbeath.com/math/service/v1/" 
+	xmlns:tns="http://bindings.mcbeath.com/math/service/v1/" 
+	xmlns:types="http://types.mcbeath.com/math/service/v1/">
+	<types>
+		<xsd:import namespace="http://types.mcbeath.com/math/service/v1/" schemaLocation="./mathtypes.xsd"/>
+	</types>
+	
+	<message name="additionRequest">
+		<part name="payload" element="types:addition"/>
+	</message>
+	<message name="additionResponse">
+		<part name="payload" element="types:additionResponse"/>
+	</message>
+	
+	<portType name="MathServicePortType">
+		<operation name="addition">
+			<input name="additionRequest" message="tns:additionRequest"/>
+			<output name="additionResponse" message="tns:additionResponse"/>
+		</operation>
+	</portType>
+	
+	<binding name="MathServiceSoapBinding" type="tns:MathServicePortType">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http/"/>
+		<operation name="addition">
+			<soap:operation soapAction=""/>
+			<input>
+				<soap:body parts="payload" use="literal"/>
+			</input>
+			<output>
+				<soap:body parts="payload" use="literal"/>
+			</output>
+		</operation>
+	</binding>
+	
+</definitions>
