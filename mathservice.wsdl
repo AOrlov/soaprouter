@@ -11,7 +11,7 @@
 
 	<service name="MathService">
 		<port name="MathPort" binding="bind:MathServiceSoapBinding">
-			<soap:address location="http://localhost:8020/SoapRouter.xqy"/>
+			<soap:address location="http://localhost:8020/SOAPRouter.xqy"/>
 		</port>
 	</service>
 	
